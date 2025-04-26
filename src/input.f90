@@ -140,8 +140,9 @@ MODULE input
         WRITE(log_file_unit,'(A,F0.3)') 'Starting value for hbound [25 Å]: ', default_h_bound
         WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
         &-----------------------------------------------------------')
+        WRITE(log_file_unit,'(A,F0.4)') 'Expected spherical grid radius R0 = ', R_expected
         WRITE(log_file_unit,'(A,F0.3)') 'Spacing for the grid [1 Å]: ', d_grid
-        WRITE(log_file_unit,'(A)') '(or FLOOR(box_dim) gridpoints evenly spaced)]'
+!        WRITE(log_file_unit,'(A)') '(or FLOOR(box_dim) gridpoints evenly spaced)]'
         WRITE(log_file_unit,'(A,F0.3)') 'Increment for the bound search [1 Å]: ', incr
         WRITE(log_file_unit,'(A,E20.5)') "x Accuracy for Ridders' root [0.01]: ", x_ACC
         WRITE(log_file_unit,'(A,E20.5)') "f Accuracy for Ridders' root [6.25e-4]: ", f_ACC
