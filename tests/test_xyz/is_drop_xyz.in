@@ -1,0 +1,14 @@
+systype CAVITY
+file_coord test.xyz
+n_atoms 30000
+n_frames 3
+first_O_atom 2001
+last_O_atom -1
+xlo 0.0
+xhi 61.37
+ylo 0.0
+yhi 61.37
+zlo 0.0
+zhi 61.37
+R0 20.0
+file_com COM_OW.xyz

@@ -28,7 +28,7 @@ CHARACTER(LEN=100)              :: input_file, log_file
 CHARACTER(LEN=200)              :: step_name
 INTEGER                         :: log_file_unit=30, ouput_file_unit=31
 !   -------------------------------------------------
-REAL(dp), ALLOCATABLE           :: atoms_mat(:,:,:), atoms_mat_i(:,:), grid(:,:,:), com_traj(:,:,:)
+REAL(dp), ALLOCATABLE           :: atoms_mat(:,:,:), atoms_mat_i(:,:), grid(:,:), com_traj(:,:,:)
 CHARACTER(LEN=3), ALLOCATABLE   :: atoms_types(:,:), com_types(:,:)
 LOGICAL                         :: bool
 REAL(dp)                        :: lbound_sphere(2), unit_vect(3), origin(3), direction
@@ -175,9 +175,9 @@ ELSE
     STOP
 END IF
 
-!$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms_mat,com_traj,wc_interface_sphere)&
+!$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms_mat,com_traj,wc_interface_sphere,file_com,fixed_com)&
 !$OMP SHARED(default_l_bound,default_h_bound,grid,xi,incr,box_dim,rho0,x_acc,f_acc,direction)&
-!$OMP SHARED(n_frames,n_atoms,first_O_atom,last_O_atom,log_file_unit)&
+!$OMP SHARED(n_frames,n_atoms,first_O_atom,last_O_atom,log_file_unit,R_expected,d_grid)&
 !$OMP PRIVATE(s, j, i,nb_o,k)&
 !$OMP PRIVATE(atoms_mat_i,origin,lbound_sphere,unit_vect)
 
@@ -201,8 +201,9 @@ DO s=1,n_frames
             origin = fixed_com
         ELSE
             origin = com_traj(3:5,1,s)
-        END
-        unit_vect = (grid(:,i,s) - origin)/R_expected
+            grid = fc_get_spherical_grid( origin, R_expected, d_grid )
+        END IF
+        unit_vect = (grid(:,i) - origin)/R_expected
 
         ! Get upper and lower bounds of density along this direction
         lbound_sphere = fc_root_density_is_between_sphere(default_l_bound,default_h_bound,unit_vect&
@@ -214,7 +215,7 @@ DO s=1,n_frames
         END IF
 
         CALL sb_ridders_root_sphere(lbound_sphere(1),lbound_sphere(2),unit_vect&
-        ,x_acc,f_acc,atoms_mat_i(3:5,:),xi,com,box_dim,rho0,wc_interface_sphere(:,i,s))
+        ,x_acc,f_acc,atoms_mat_i(3:5,:),xi,origin,box_dim,rho0,wc_interface_sphere(:,i,s))
 
     END DO
     DEALLOCATE(atoms_mat_i)
@@ -236,11 +237,11 @@ WRITE(log_file_unit,'(A)') 'Start '//TRIM(step_name)//' ...'
 
 OPEN(UNIT=ouput_file_unit, FILE = fc_trim_ext(file_coord)//"-surface.xyz")
 DO s=1,n_frames
-    WRITE(ouput_file_unit,'(I0)') SIZE(grid,DIM=2)*SIZE(grid,DIM=3)
+    WRITE(ouput_file_unit,'(I0)') SIZE(grid,DIM=2)
     WRITE(ouput_file_unit,'(A9,I0)') "Frame: ", s
     DO i=1,SIZE(grid,DIM=2)
             WRITE(ouput_file_unit,'(A2,1X,F0.4,1X,F0.4,1X,F0.4)') ADJUSTL( "XS" )&
-            , wc_interface_sphere(1,i,s), wc_interface_upper(2,i,s), wc_interface_upper(3,i,s)
+            , wc_interface_sphere(1,i,s), wc_interface_sphere(2,i,s), wc_interface_sphere(3,i,s)
     END DO
 END DO
 CLOSE(UNIT=ouput_file_unit)

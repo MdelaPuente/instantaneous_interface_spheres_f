@@ -70,7 +70,7 @@ MODULE sub
 
     PURE FUNCTION fc_root_density_is_between_sphere(a,b,unit_vec,atoms,xi,increment,com,box_dim,rho0,direction)&
      RESULT(root_density_bounds_low_up)
-        REAL(dp), INTENT(IN) :: a,b,x_i,x_j,xi,increment,z_orig,box_dim(:),rho0,direction
+        REAL(dp), INTENT(IN) :: a,b,xi,increment,box_dim(:),rho0,direction
         REAL(dp), INTENT(IN):: atoms(:,:), unit_vec(3), com(3)
         REAL(dp):: root_density_bounds_low_up(2), low_bound,hi_bound,l_i, l_h
 
@@ -85,7 +85,6 @@ MODULE sub
 
         ! Density at a should be above/below rho0 if system is droplet/cavity
         IF (low_bound*direction .LE. 0.0 ) THEN
-            counts1 = 1
             DO WHILE (fc_rho_norm_diff_at_r( (a-l_i)*unit_vec + com , atoms,xi,box_dim,rho0)*direction .LE. 0.0)
                 l_i=l_i+increment
             END DO
@@ -101,7 +100,7 @@ MODULE sub
     SUBROUTINE sb_ridders_root_sphere(a,b,unit_vec,x_accuracy,f_accuracy,atoms,xi,com,box,rho0,result)
         REAL(dp), INTENT(IN) :: a,b,unit_vec(3),x_accuracy,f_accuracy,xi,com(3),box(3),rho0
         REAL(dp), INTENT(IN) :: atoms(:,:)
-        REAL(dp), INTENT(OUT) :: result
+        REAL(dp), INTENT(OUT) :: result(3)
         INTEGER :: MAXITER,counts
         REAL(dp) :: x_low,x_high,f_low,f_high,x_m,f_m,s,x_new,root,f_new
 
@@ -112,11 +111,11 @@ MODULE sub
         f_high=fc_rho_norm_diff_at_r( x_high*unit_vec + com ,atoms,xi,box,rho0)
 
         IF (ABS(f_low) .LT. f_accuracy ) THEN
-            result = x_low*unit_vec + com
+            result(:) = x_low*unit_vec(:) + com(:)
             RETURN
         END IF
         IF (ABS(f_high) .LT. f_accuracy ) THEN
-            root = x_high*unit_vec + com
+            result(:) = x_high*unit_vec(:) + com(:)
             RETURN
         END IF
 
@@ -134,14 +133,14 @@ MODULE sub
             x_new = x_m + (x_m - x_low) * (SIGN(1.0_dp,(f_low-f_high)) * f_m / s)
 
             IF ( ABS(x_new - root) .LT. x_accuracy) THEN
-                result = x_new*unit_vec + com
+                result(:) = x_new*unit_vec(:) + com(:)
                 RETURN
             END IF
 
             root = x_new
-            f_new = fc_rho_norm_diff_at_r([x_i,x_j,direction*root+z_orig],atoms,xi,box,rho0)
+            f_new = fc_rho_norm_diff_at_r( root*unit_vec + com ,atoms,xi,box,rho0)
             IF ( ABS(f_new) < f_accuracy ) THEN
-                result = root*unit_vec + com
+                result(:) = root*unit_vec(:) + com(:)
                 RETURN
             END IF
 
@@ -158,7 +157,7 @@ MODULE sub
                 f_low=f_new
             END IF
             IF (ABS(x_high - x_low) .LE. x_accuracy) THEN
-                result = root*unit_vec + com
+                result(:) = root*unit_vec(:) + com(:)
                 RETURN
             END IF
 

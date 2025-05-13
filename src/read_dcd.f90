@@ -91,9 +91,13 @@ MODULE read_dcd
                 atoms_mat(2,i,1) = 12
             ELSE IF ( atoms_types(i,1) .EQ. "O" ) THEN
                 atoms_mat(2,i,1) = 16
+            ELSE IF ( atoms_types(i,1) .EQ. "OW" ) THEN
+                atoms_mat(2,i,1) = 16
             ELSE IF ( atoms_types(i,1) .EQ. "N" ) THEN
                 atoms_mat(2,i,1) = 14
             ELSE IF ( atoms_types(i,1) .EQ. "H" ) THEN
+                atoms_mat(2,i,1) = 1
+            ELSE IF ( atoms_types(i,1) .EQ. "HW" ) THEN
                 atoms_mat(2,i,1) = 1
             ELSE
                 atoms_mat(2,i,1) = -1

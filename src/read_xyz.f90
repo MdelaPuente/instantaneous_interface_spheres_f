@@ -37,9 +37,13 @@ MODULE read_xyz
                     atoms_mat(2,i,s) = 12
                 ELSE IF ( atoms_types(i,s) .EQ. "O" ) THEN
                     atoms_mat(2,i,s) = 16
+                ELSE IF ( atoms_types(i,s) .EQ. "OW" ) THEN
+                    atoms_mat(2,i,s) = 16
                 ELSE IF ( atoms_types(i,s) .EQ. "N" ) THEN
                     atoms_mat(2,i,s) = 14
                 ELSE IF ( atoms_types(i,s) .EQ. "H" ) THEN
+                    atoms_mat(2,i,s) = 1
+                ELSE IF ( atoms_types(i,s) .EQ. "HW" ) THEN
                     atoms_mat(2,i,s) = 1
                 ELSE IF ( atoms_types(i,s) .EQ. "XL" ) THEN
                     atoms_mat(2,i,s) = 200
