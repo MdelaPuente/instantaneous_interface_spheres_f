@@ -13,8 +13,8 @@ USE input
 
 USE fibonacci, ONLY: fc_get_spherical_grid
 
-USE sub, ONLY: fc_ij_vector,fc_get_center_of_slab,&
-&fc_root_density_is_between,fc_trim_ext,sb_ridders_root
+USE sub, ONLY: fc_ij_vector,fc_root_density_is_between_sphere,&
+&fc_trim_ext,sb_ridders_root_sphere
 
 USE read_dcd, ONLY:sb_read_dcd_pdb
 USE read_xyz, ONLY:sb_read_xyz
@@ -31,7 +31,7 @@ INTEGER                         :: log_file_unit=30, ouput_file_unit=31
 REAL(dp), ALLOCATABLE           :: atoms_mat(:,:,:), atoms_mat_i(:,:), grid(:,:,:), com_traj(:,:,:)
 CHARACTER(LEN=3), ALLOCATABLE   :: atoms_types(:,:), com_types(:,:)
 LOGICAL                         :: bool
-REAL(dp)                        :: lbound_up(2), lbound_down(2), unit_vect(3)
+REAL(dp)                        :: lbound_sphere(2), unit_vect(3), origin(3), direction
 REAL(dp), ALLOCATABLE           :: wc_interface_sphere(:,:,:)
 !   -------------------------------------------------
 INTEGER                         :: s, i, j, nb_o, k
@@ -73,6 +73,15 @@ DO i=1,3
         STOP
     END IF
 END DO
+
+IF (systype == "DROPLET") THEN
+    direction = 1.0_dp
+ELSE IF (systype == "CAVITY") THEN
+    direction = -1.0_dp
+ELSE
+    WRITE(log_file_unit,*) "The system type must be DROPLET or CAVITY. Please check. Exiting..."
+    STOP
+END IF
 
 WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
 &STARTING---------------------------------------------------')
@@ -167,10 +176,10 @@ ELSE
 END IF
 
 !$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms_mat,com_traj,wc_interface_sphere)&
-!$OMP SHARED(default_l_bound,default_h_bound,grid,xi,incr,box_dim,rho0,x_acc,f_acc)&
+!$OMP SHARED(default_l_bound,default_h_bound,grid,xi,incr,box_dim,rho0,x_acc,f_acc,direction)&
 !$OMP SHARED(n_frames,n_atoms,first_O_atom,last_O_atom,log_file_unit)&
 !$OMP PRIVATE(s, j, i,nb_o,k)&
-!$OMP PRIVATE(atoms_mat_i,lbound_up,lbound_down,unit_vect)
+!$OMP PRIVATE(atoms_mat_i,origin,lbound_sphere,unit_vect)
 
 DO s=1,n_frames
     ! Count number of O
@@ -187,42 +196,25 @@ DO s=1,n_frames
 
     DO i=1,SIZE(grid,DIM=2) ! Loop over grid directions
 
-        ! Get the bounds
-
+        ! Get the COM of the sphere and unit vector of current node
         IF ( file_com == "NONE" ) THEN
-            unit_vect = (grid(:,i,s) - fixed_com(:))/R_expected
+            origin = fixed_com
         ELSE
-            unit_vect = (grid(:,i,s) - com_traj(3:5,1,s))/R_expected
+            origin = com_traj(3:5,1,s)
         END
+        unit_vect = (grid(:,i,s) - origin)/R_expected
 
+        ! Get upper and lower bounds of density along this direction
+        lbound_sphere = fc_root_density_is_between_sphere(default_l_bound,default_h_bound,unit_vect&
+        ,atoms_mat_i(3:5,:),xi,incr,origin,box_dim,rho0,direction)
 
-        lbound_up = fc_root_density_is_between(default_l_bound,default_h_bound,grid(1,i,j),grid(2,i,j)&
-        ,atoms_mat_i(3:5,:),xi,incr,z_bounds(2),box_dim,rho0,1.0_dp)
-
-        IF ( (lbound_up(1) .EQ. 0.0_dp) .AND. (lbound_up(2) .EQ. 0.0_dp)) THEN
+        IF ( (lbound_sphere(1) .EQ. 0.0_dp) .AND. (lbound_sphere(2) .EQ. 0.0_dp)) THEN
             WRITE(log_file_unit,*) "Error within the search of roots. Exiting..."
             STOP
         END IF
 
-        CALL sb_ridders_root(lbound_up(1),lbound_up(2),grid(1,i,j),grid(2,i,j)&
-        ,1,x_acc,f_acc,atoms_mat_i(3:5,:),xi,z_bounds(2),box_dim,rho0,wc_interface_upper(3,i,j,s))
-
-        wc_interface_upper(1,i,j,s)=grid(1,i,j)
-        wc_interface_upper(2,i,j,s)=grid(2,i,j)
-
-        lbound_down = fc_root_density_is_between(default_l_bound,default_h_bound,grid(1,i,j),grid(2,i,j)&
-        ,atoms_mat_i(3:5,:),xi,incr,z_bounds(2),box_dim,rho0,-1.0_dp)
-
-        IF ( (lbound_down(1) .EQ. 0.0_dp) .AND. (lbound_down(2) .EQ. 0.0_dp)) THEN
-            WRITE(log_file_unit,*) "Error within the search of roots. Exiting..."
-            STOP
-        END IF
-
-        CALL sb_ridders_root(lbound_down(1),lbound_down(2),grid(1,i,j),grid(2,i,j)&
-        ,-1,x_acc,f_acc,atoms_mat_i(3:5,:),xi,z_bounds(2),box_dim,rho0,wc_interface_lower(3,i,j,s))
-
-        wc_interface_lower(1,i,j,s)=grid(1,i,j)
-        wc_interface_lower(2,i,j,s)=grid(2,i,j)
+        CALL sb_ridders_root_sphere(lbound_sphere(1),lbound_sphere(2),unit_vect&
+        ,x_acc,f_acc,atoms_mat_i(3:5,:),xi,com,box_dim,rho0,wc_interface_sphere(:,i,s))
 
     END DO
     DEALLOCATE(atoms_mat_i)
@@ -234,7 +226,7 @@ WRITE(log_file_unit,'(A,F10.2,A10)') TRIM("Done with "//step_name)//" :", finish
 WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
 &-----------------------------------------------------------')
 ! ----------------------------------------------------------------------------------------------
-! -----------------------------------------------Write XYZ interfaces
+! -----------------------------------------------Write XYZ interface
 ! ----------------------------------------------------------------------------------------------
 start = OMP_get_wtime()
 step_name='writing coordinates for the upper interface (XU)'
@@ -242,15 +234,13 @@ WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
 &-----------------------------------------------------------')
 WRITE(log_file_unit,'(A)') 'Start '//TRIM(step_name)//' ...'
 
-OPEN(UNIT=ouput_file_unit, FILE = fc_trim_ext(file_coord)//"-surface-upper.xyz")
+OPEN(UNIT=ouput_file_unit, FILE = fc_trim_ext(file_coord)//"-surface.xyz")
 DO s=1,n_frames
     WRITE(ouput_file_unit,'(I0)') SIZE(grid,DIM=2)*SIZE(grid,DIM=3)
     WRITE(ouput_file_unit,'(A9,I0)') "Frame: ", s
     DO i=1,SIZE(grid,DIM=2)
-        DO j=1,SIZE(grid,DIM=3)
-            WRITE(ouput_file_unit,'(A2,1X,F0.4,1X,F0.4,1X,F0.4)') ADJUSTL( "XU" )&
-            , wc_interface_upper(1,i,j,s), wc_interface_upper(2,i,j,s), wc_interface_upper(3,i,j,s)
-        END DO
+            WRITE(ouput_file_unit,'(A2,1X,F0.4,1X,F0.4,1X,F0.4)') ADJUSTL( "XS" )&
+            , wc_interface_sphere(1,i,s), wc_interface_upper(2,i,s), wc_interface_upper(3,i,s)
     END DO
 END DO
 CLOSE(UNIT=ouput_file_unit)
@@ -263,25 +253,6 @@ start = OMP_get_wtime()
 step_name='writing coordinates for the lower interface (XL)'
 WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
 &-----------------------------------------------------------')
-WRITE(log_file_unit,'(A)') 'Start '//TRIM(step_name)//' ...'
 
-OPEN(UNIT=ouput_file_unit, FILE = fc_trim_ext(file_coord)//"-surface-lower.xyz")
-DO s=1,n_frames
-    WRITE(ouput_file_unit,'(I0)') SIZE(grid,DIM=2)*SIZE(grid,DIM=3)
-    WRITE(ouput_file_unit,'(A9,I0)') "Frame: ", s
-    DO i=1,SIZE(grid,DIM=2)
-        DO j=1,SIZE(grid,DIM=3)
-            WRITE(ouput_file_unit,'(A2,1X,F0.4,1X,F0.4,1X,F0.4)') ADJUSTL( "XL" )&
-            , wc_interface_lower(1,i,j,s), wc_interface_lower(2,i,j,s), wc_interface_lower(3,i,j,s)
-        END DO
-    END DO
-END DO
-CLOSE(UNIT=ouput_file_unit)
-finish = OMP_get_wtime()
-WRITE(log_file_unit,'(A,F10.2,A10)') TRIM("Done with "//step_name)//" :", finish-start, " seconds."
-WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
-&-----------------------------------------------------------')
-WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
-&END--------------------------------------------------------')
 ! ----------------------------------------------------------------------------------------------
 END PROGRAM main

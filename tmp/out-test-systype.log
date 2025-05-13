@@ -1,0 +1,37 @@
+-----------------------------------------INPUT PARAMETERS-------------------------------------------
+----------------------------------------------------------------------------------------------------
+Type of spherical system: CAVITY
+Atomic coordinates file: test2.dcd
+Number of Atoms: -1
+[Overridden/Optionnal if DCD]
+Number of Frames: -1
+[if DCD and omitted/-1, use all frames]
+Box dimensions: 
+X                   0.0000000000                  21.0460000000
+Y                   0.0000000000                  21.0460000000
+Z                   0.0000000000                  84.1820000000
+Center of mass (COM) position: 
+X                  31.5000000000
+Y                  31.0300000000
+Z                  31.7310000000
+----------------------------------------------------------------------------------------------------
+Selection index file: NONE
+Index for oxygen atom selection Start,End: 
+ 33,-1 
+[-1,-1] (start from first, end at last)]
+ρ0 [0.016 Å^-3]: .016
+ξ [2.4 Å]: 2.400
+----------------------------------------------------------------------------------------------------
+Root search will start betwen COM+lbound and COM+hbound
+Starting value for lbound [10 Å]: 10.000
+Starting value for hbound [25 Å]: 25.000
+----------------------------------------------------------------------------------------------------
+Expected spherical grid radius R0 = 15.0000
+Spacing for the grid [1 Å]: 1.000
+Increment for the bound search [1 Å]: 1.000
+x Accuracy for Ridders' root [0.01]:          0.10000E-01
+f Accuracy for Ridders' root [6.25e-4]:          0.62500E-03
+----------------------------------------------------------------------------------------------------
+-----------------------------------------END OF INPUT PARAMETERS------------------------------------
+----------------------------------------------------------------------------------------------------
+ 

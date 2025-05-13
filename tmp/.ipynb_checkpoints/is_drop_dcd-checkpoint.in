@@ -1,0 +1,17 @@
+systype CAVITY
+file_coord test2.dcd
+!n_atoms 932
+!n_frames 10
+first_O_atom 33
+last_O_atom -1
+xlo 0.0
+xhi 21.046
+ylo 0.0
+yhi 21.046
+zlo    0.0
+zhi    84.182
+R0 15.0
+xcom 31.5
+ycom 31.03
+zcom 31.731
+!file_com dummy_com_file_name.txt

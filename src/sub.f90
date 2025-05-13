@@ -48,15 +48,6 @@ MODULE sub
          ij_vector = ij_vector - box_dim * ANINT( ij_vector / box_dim )
     END FUNCTION fc_ij_vector
 
-    PURE FUNCTION fc_get_center_of_slab(mat_xyz_atm) RESULT(z_bounds_min_avg_max)
-        REAL(dp), INTENT(IN) :: mat_xyz_atm(:,:)
-        REAL(dp) :: z_bounds_min_avg_max(3)
-
-        z_bounds_min_avg_max(1)=MINVAL(mat_xyz_atm(3,:))
-        z_bounds_min_avg_max(3)=MAXVAL(mat_xyz_atm(3,:))
-        z_bounds_min_avg_max(2)=SUM(mat_xyz_atm(3,:))/SIZE(mat_xyz_atm(:,:),DIM=2)
-    END FUNCTION
-
     PURE FUNCTION fc_phi(r,xi) RESULT(phi_r_xi)
         REAL(dp), INTENT(IN) :: r,xi
         REAL(dp) :: phi_r_xi
@@ -77,37 +68,39 @@ MODULE sub
         rho_norm_diff_at_r = (rho/rho0 - 1.0_dp )
     END FUNCTION
 
-    PURE FUNCTION fc_root_density_is_between(a,b,x_i,x_j,atoms,xi,increment,z_orig,box_dim,rho0,direction)&
+    PURE FUNCTION fc_root_density_is_between_sphere(a,b,unit_vec,atoms,xi,increment,com,box_dim,rho0,direction)&
      RESULT(root_density_bounds_low_up)
         REAL(dp), INTENT(IN) :: a,b,x_i,x_j,xi,increment,z_orig,box_dim(:),rho0,direction
-        REAL(dp), INTENT(IN):: atoms(:,:)
+        REAL(dp), INTENT(IN):: atoms(:,:), unit_vec(3), com(3)
         REAL(dp):: root_density_bounds_low_up(2), low_bound,hi_bound,l_i, l_h
 
         IF ( a .GT. b) THEN
             root_density_bounds_low_up=[0.0_dp,0.0_dp]
             RETURN
         END IF
-        low_bound = fc_rho_norm_diff_at_r([x_i,x_j,direction*a+z_orig],atoms,xi,box_dim,rho0)
-        hi_bound = fc_rho_norm_diff_at_r([x_i,x_j,direction*b+z_orig],atoms,xi,box_dim,rho0)
+        low_bound = fc_rho_norm_diff_at_r( a*unit_vec + com, atoms,xi,box_dim,rho0)
+        hi_bound  = fc_rho_norm_diff_at_r( b*unit_vec + com, atoms,xi,box_dim,rho0)
         l_i = 0.0_dp
         l_h = 0.0_dp
-        IF (low_bound .LE. 0.0 ) THEN
-            DO WHILE (fc_rho_norm_diff_at_r([x_i,x_j,direction*(a-l_i)+z_orig],atoms,xi,box_dim,rho0) .LE. 0.0)
+
+        ! Density at a should be above/below rho0 if system is droplet/cavity
+        IF (low_bound*direction .LE. 0.0 ) THEN
+            counts1 = 1
+            DO WHILE (fc_rho_norm_diff_at_r( (a-l_i)*unit_vec + com , atoms,xi,box_dim,rho0)*direction .LE. 0.0)
                 l_i=l_i+increment
             END DO
         END IF
-        IF (hi_bound .GE. 0.0 ) THEN
-            DO WHILE (fc_rho_norm_diff_at_r([x_i,x_j,direction*(b+l_h)+z_orig],atoms,xi,box_dim,rho0) .GE. 0.0)
+        IF (hi_bound*direction .GE. 0.0 ) THEN
+            DO WHILE (fc_rho_norm_diff_at_r( (b+l_h)*unit_vec + com ,atoms,xi,box_dim,rho0)*direction .GE. 0.0)
                 l_h=l_h+increment
             END DO
         END IF
         root_density_bounds_low_up=[a-l_i,b+l_h]
     END FUNCTION
 
-    SUBROUTINE sb_ridders_root(a,b,x_i,x_j,direction,x_accuracy,f_accuracy,atoms,xi,z_orig,box,rho0,result)
-        REAL(dp), INTENT(IN) :: a,b,x_i,x_j,x_accuracy,f_accuracy,xi,z_orig,box(3),rho0
+    SUBROUTINE sb_ridders_root_sphere(a,b,unit_vec,x_accuracy,f_accuracy,atoms,xi,com,box,rho0,result)
+        REAL(dp), INTENT(IN) :: a,b,unit_vec(3),x_accuracy,f_accuracy,xi,com(3),box(3),rho0
         REAL(dp), INTENT(IN) :: atoms(:,:)
-        INTEGER, INTENT(IN) :: direction
         REAL(dp), INTENT(OUT) :: result
         INTEGER :: MAXITER,counts
         REAL(dp) :: x_low,x_high,f_low,f_high,x_m,f_m,s,x_new,root,f_new
@@ -115,22 +108,22 @@ MODULE sub
         MAXITER=100
         x_low=a
         x_high=b
-        f_low=fc_rho_norm_diff_at_r([x_i,x_j,direction*x_low+z_orig],atoms,xi,box,rho0)
-        f_high=fc_rho_norm_diff_at_r([x_i,x_j,direction*x_high+z_orig],atoms,xi,box,rho0)
+        f_low=fc_rho_norm_diff_at_r( x_low*unit_vec + com ,atoms,xi,box,rho0)
+        f_high=fc_rho_norm_diff_at_r( x_high*unit_vec + com ,atoms,xi,box,rho0)
 
         IF (ABS(f_low) .LT. f_accuracy ) THEN
-            result = 1.0_dp * direction * x_low + z_orig
+            result = x_low*unit_vec + com
             RETURN
         END IF
         IF (ABS(f_high) .LT. f_accuracy ) THEN
-            root = 1.0_dp * direction * x_high + z_orig
+            root = x_high*unit_vec + com
             RETURN
         END IF
 
         root = 0
         DO counts=1,MAXITER
             x_m = 0.5*(x_low + x_high)
-            f_m = fc_rho_norm_diff_at_r([x_i,x_j,direction*x_m+z_orig],atoms,xi,box,rho0)
+            f_m = fc_rho_norm_diff_at_r(x_m*unit_vec + com,atoms,xi,box,rho0)
             s = SQRT(f_m**2 - f_low*f_high)
 
             IF ( s .LT. 1.0e-9) THEN
@@ -141,14 +134,14 @@ MODULE sub
             x_new = x_m + (x_m - x_low) * (SIGN(1.0_dp,(f_low-f_high)) * f_m / s)
 
             IF ( ABS(x_new - root) .LT. x_accuracy) THEN
-                result = direction * x_new + z_orig
+                result = x_new*unit_vec + com
                 RETURN
             END IF
 
             root = x_new
             f_new = fc_rho_norm_diff_at_r([x_i,x_j,direction*root+z_orig],atoms,xi,box,rho0)
             IF ( ABS(f_new) < f_accuracy ) THEN
-                result = direction * root + z_orig
+                result = root*unit_vec + com
                 RETURN
             END IF
 
@@ -165,7 +158,7 @@ MODULE sub
                 f_low=f_new
             END IF
             IF (ABS(x_high - x_low) .LE. x_accuracy) THEN
-                result = direction * root + z_orig
+                result = root*unit_vec + com
                 RETURN
             END IF
 
@@ -175,33 +168,5 @@ MODULE sub
         STOP
 
     END SUBROUTINE
-
-    PURE FUNCTION fc_get_grid_from_box(box_mat,delim) RESULT (grid)
-        REAL(dp),INTENT(IN)::box_mat(2,3)
-        REAL(dp),INTENT(IN)::delim
-        REAL(dp),ALLOCATABLE::grid(:,:,:)
-        REAL(dp) :: box_x,box_y,delim_x,delim_y
-        INTEGER :: i,j
-
-        box_x = box_mat(2,1) - box_mat(1,1)
-        box_y = box_mat(2,2) - box_mat(1,2)
-        IF ( MODULO(box_x,FLOOR(box_x)*1.0_dp) .GT. 1e-10 ) THEN
-            delim_x = box_x/(FLOOR(box_x)*1.0_dp)
-        ELSE
-            delim_x = delim
-        END IF
-        IF ( MODULO(box_y,FLOOR(box_y)*1.0_dp) .GT. 1e-10 ) THEN
-            delim_y = box_y/(FLOOR(box_y)*1.0_dp)
-        ELSE
-            delim_y = delim
-        END IF
-        ALLOCATE(grid(2,FLOOR(box_x),FLOOR(box_y)))
-        DO j=1,FLOOR(box_y)
-            DO i=1,FLOOR(box_x)
-                grid(1,i,j) = box_mat(1,1)+i*delim_x*1.0_dp
-                grid(2,i,j) = box_mat(1,2)+j*delim_y*1.0_dp
-            END DO
-        END DO
-    END FUNCTION
 
 END MODULE sub

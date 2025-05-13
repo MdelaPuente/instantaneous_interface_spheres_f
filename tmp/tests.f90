@@ -32,7 +32,7 @@
 PROGRAM test_input
      USE input
      IMPLICIT NONE
-     CHARACTER(LEN=64) :: log_file="out-test.log"
+     CHARACTER(LEN=64) :: log_file="out-test-systype.log"
      CHARACTER(LEN=100) :: input_file
      INTEGER :: log_file_unit=30
      LOGICAL :: bool

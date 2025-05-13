@@ -23,6 +23,7 @@ MODULE input
     REAL(dp)                    :: x_ACC=0.01_dp, f_ACC=6.25e-4_dp
     REAL(dp)                    :: fixed_com(3), R_expected=10.0
     CHARACTER(LEN=64)           :: file_com="NONE"
+    CHARACTER(LEN=10)           :: systype="DROPLET"
 
     CONTAINS
 
@@ -48,6 +49,8 @@ MODULE input
                 SELECT CASE (label)
                     CASE ('file_coord')
                         READ(value, * , IOSTAT=iostatus) file_coord
+                    CASE ('systype')
+                        READ(value, * , IOSTAT=iostatus) systype
                     CASE ('file_index')
                         READ(value, * , IOSTAT=iostatus) file_index
                     CASE ('n_atoms')
@@ -105,6 +108,7 @@ MODULE input
         &INPUT PARAMETERS-------------------------------------------')
         WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
         &-----------------------------------------------------------')
+        WRITE(log_file_unit,'(A,A)') 'Type of spherical system: ', ADJUSTL(TRIM(systype))
         WRITE(log_file_unit,'(A,A)') 'Atomic coordinates file: ', ADJUSTL(TRIM(file_coord))
         WRITE(log_file_unit,'(A,I0)') 'Number of Atoms: ', n_atoms
         WRITE(log_file_unit,'(A)') '[Overridden/Optionnal if DCD]'

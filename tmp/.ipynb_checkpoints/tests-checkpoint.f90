@@ -27,27 +27,32 @@
   
 ! END PROGRAM test_fib
 
+
+!!!!!! It works 
 PROGRAM test_input
-    USE input
-    IMPLICIT NONE
-    CHARACTER(LEN=64) :: log_file="out-test.log"
-    CHARACTER(LEN=100) :: input_file
-    INTEGER :: log_file_unit=30
-    LOGICAL :: bool
+     USE input
+     IMPLICIT NONE
+     CHARACTER(LEN=64) :: log_file="out-test-systype.log"
+     CHARACTER(LEN=100) :: input_file
+     INTEGER :: log_file_unit=30
+     LOGICAL :: bool
 
-    OPEN(UNIT=log_file_unit, FILE=log_file)
+     OPEN(UNIT=log_file_unit, FILE=log_file)
 
-    CALL GET_COMMAND_ARGUMENT(1, input_file)
-    input_file = TRIM(input_file)
-    INQUIRE(FILE=input_file,EXIST=bool)
-    IF ( .NOT.(bool)  )  THEN
-        WRITE(log_file_unit,*) "The input file doesn't exist. Exiting..."
-        STOP
-    END IF
+     CALL GET_COMMAND_ARGUMENT(1, input_file)
+     input_file = TRIM(input_file)
+     INQUIRE(FILE=input_file,EXIST=bool)
+     IF ( .NOT.(bool)  )  THEN
+         WRITE(log_file_unit,*) "The input file doesn't exist. Exiting..."
+         STOP
+     END IF
     
-    CALL read_input(input_file,log_file_unit)
-    CLOSE(UNIT=log_file_unit)
+     CALL read_input(input_file,log_file_unit)
+     CLOSE(UNIT=log_file_unit)
 
-    PRINT *, "File with COM positions: ", file_com
+     PRINT *, "File with COM positions: ", file_com
     
 END PROGRAM test_input
+
+
+

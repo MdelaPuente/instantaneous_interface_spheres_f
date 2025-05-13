@@ -1,3 +1,4 @@
+systype CAVITY
 file_coord test2.dcd
 !n_atoms 932
 !n_frames 10
