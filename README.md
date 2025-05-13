@@ -55,7 +55,7 @@ A small Fortran program to calcultate Instantaneous Liquid Interfaces as propose
 
 1. Clone the repository
    ```sh
-   git clone https://github.com/laagegroup/instantaneous_interface_spheres_f.git
+   git clone https://github.com/MdelaPuente/instantaneous_interface_spheres_f.git
    ```
 2. Or get a release and untar the archive (source code)
    ```sh
