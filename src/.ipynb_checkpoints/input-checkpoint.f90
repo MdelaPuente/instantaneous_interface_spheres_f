@@ -21,7 +21,7 @@ MODULE input
     REAL(dp)                    :: default_h_bound=25.0_dp
     REAL(dp)                    :: d_grid=1.0_dp, incr=1.0_dp
     REAL(dp)                    :: x_ACC=0.01_dp, f_ACC=6.25e-4_dp
-    REAL(dp)                    :: fixed_com(3)
+    REAL(dp)                    :: fixed_com(3), R_expected=10.0
     CHARACTER(LEN=64)           :: file_com="NONE"
 
     CONTAINS
@@ -86,6 +86,8 @@ MODULE input
                         READ(value, * , IOSTAT=iostatus) first_O_atom
                     CASE ('last_O_atom')
                         READ(value, * , IOSTAT=iostatus) last_O_atom
+                    CASE ('R0')
+                        READ(value, * , IOSTAT=iostatus) R_expected
                     CASE ('xcom')
                         READ(value, * , IOSTAT=iostatus) fixed_com(1)
                     CASE ('ycom')
@@ -138,8 +140,9 @@ MODULE input
         WRITE(log_file_unit,'(A,F0.3)') 'Starting value for hbound [25 Å]: ', default_h_bound
         WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
         &-----------------------------------------------------------')
+        WRITE(log_file_unit,'(A,F0.4)') 'Expected spherical grid radius R0 = ', R_expected
         WRITE(log_file_unit,'(A,F0.3)') 'Spacing for the grid [1 Å]: ', d_grid
-        WRITE(log_file_unit,'(A)') '(or FLOOR(box_dim) gridpoints evenly spaced)]'
+!        WRITE(log_file_unit,'(A)') '(or FLOOR(box_dim) gridpoints evenly spaced)]'
         WRITE(log_file_unit,'(A,F0.3)') 'Increment for the bound search [1 Å]: ', incr
         WRITE(log_file_unit,'(A,E20.5)') "x Accuracy for Ridders' root [0.01]: ", x_ACC
         WRITE(log_file_unit,'(A,E20.5)') "f Accuracy for Ridders' root [6.25e-4]: ", f_ACC

@@ -11,7 +11,9 @@ USE OMP_LIB
 
 USE input
 
-USE sub, ONLY: fc_ij_vector,fc_get_grid_from_box,fc_get_center_of_slab,&
+USE fibonacci, ONLY: fc_get_spherical_grid
+
+USE sub, ONLY: fc_ij_vector,fc_get_center_of_slab,&
 &fc_root_density_is_between,fc_trim_ext,sb_ridders_root
 
 USE read_dcd, ONLY:sb_read_dcd_pdb
@@ -26,11 +28,11 @@ CHARACTER(LEN=100)              :: input_file, log_file
 CHARACTER(LEN=200)              :: step_name
 INTEGER                         :: log_file_unit=30, ouput_file_unit=31
 !   -------------------------------------------------
-REAL(dp), ALLOCATABLE           :: atoms_mat(:,:,:), atoms_mat_i(:,:), grid(:,:,:)
-CHARACTER(LEN=3), ALLOCATABLE   :: atoms_types(:,:)
+REAL(dp), ALLOCATABLE           :: atoms_mat(:,:,:), atoms_mat_i(:,:), grid(:,:,:), com_traj(:,:,:)
+CHARACTER(LEN=3), ALLOCATABLE   :: atoms_types(:,:), com_types(:,:)
 LOGICAL                         :: bool
-REAL(dp)                        :: z_bounds(3), lbound_up(2), lbound_down(2)
-REAL(dp), ALLOCATABLE           :: wc_interface_sphere(:,:,:,:)
+REAL(dp)                        :: lbound_up(2), lbound_down(2), unit_vect(3)
+REAL(dp), ALLOCATABLE           :: wc_interface_sphere(:,:,:)
 !   -------------------------------------------------
 INTEGER                         :: s, i, j, nb_o, k
 
@@ -121,26 +123,35 @@ WRITE(log_file_unit,'(A)') 'Start '//TRIM(step_name)//' ...'
 
 ! Only one grid for all the calculation (ie. fixed COM)
 IF ( file_com == "NONE" ) THEN
-    
-    grid = fc_get_grid_from_box(box_bounds,d_grid)
+    grid = fc_get_spherical_grid(fixed_com, R_expected, d_grid)
+ELSE
+    IF ( (n_frames .LE. 0) ) THEN
+        WRITE(log_file_unit,*) "Number of Atoms/Frames must be defined for XYZ COM files. Exiting..."
+        STOP
+    END IF
+
+    ALLOCATE(com_traj(5,1,n_frames))
+    ALLOCATE(com_types(1,n_frames))
+    com_traj(:,:,:) = 0.0_dp
+    CALL sb_read_xyz(file_com,1,n_frames,com_traj,com_types)
+    grid = fc_get_spherical_grid( com_traj(3:5,1,1), R_expected, d_grid )
+END IF
 
 finish = OMP_get_wtime()
 WRITE(log_file_unit,'(A,F10.2,A10)') TRIM("Done with "//step_name)//" :", finish-start, " seconds."
 WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
 &-----------------------------------------------------------')
 ! ----------------------------------------------------------------------------------------------
-! -----------------------------------------------Calculate both instantaneous interfaces (OpenMP by step)
+! -----------------------------------------------Calculate spherical instantaneous interfaces (OpenMP by step)
 ! ----------------------------------------------------------------------------------------------
 start = OMP_get_wtime()
-step_name='calculating both (upper and lower) instantaneous interfaces'
+step_name='calculating spherical instantaneous interface'
 WRITE(log_file_unit,'(A100)') TRIM('-----------------------------------------&
 &-----------------------------------------------------------')
 WRITE(log_file_unit,'(A)') 'Start '//TRIM(step_name)//' ...'
 
-ALLOCATE(wc_interface_lower(3,SIZE(grid,DIM=2),SIZE(grid,DIM=3),n_frames))
-ALLOCATE(wc_interface_upper(3,SIZE(grid,DIM=2),SIZE(grid,DIM=3),n_frames))
-wc_interface_lower=0.0_dp
-wc_interface_upper=0.0_dp
+ALLOCATE(wc_interface_sphere(3,SIZE(grid,DIM=2),n_frames))
+wc_interface_sphere=0.0_dp
 
 IF ( file_coord .NE. '0') THEN
     IF ( first_O_atom .LE. 0 ) first_O_atom=1
@@ -155,11 +166,11 @@ ELSE
     STOP
 END IF
 
-!$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms_mat,wc_interface_upper,wc_interface_lower)&
+!$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms_mat,com_traj,wc_interface_sphere)&
 !$OMP SHARED(default_l_bound,default_h_bound,grid,xi,incr,box_dim,rho0,x_acc,f_acc)&
 !$OMP SHARED(n_frames,n_atoms,first_O_atom,last_O_atom,log_file_unit)&
-!$OMP PRIVATE(s, j, i,nb_o,k,z_bounds)&
-!$OMP PRIVATE(atoms_mat_i,lbound_up,lbound_down)
+!$OMP PRIVATE(s, j, i,nb_o,k)&
+!$OMP PRIVATE(atoms_mat_i,lbound_up,lbound_down,unit_vect)
 
 DO s=1,n_frames
     ! Count number of O
@@ -167,47 +178,52 @@ DO s=1,n_frames
     ALLOCATE(atoms_mat_i(5,nb_o))
     ! Populate the matrix
     k=0
-    DO i=first_O_atom,n_atoms
+    DO i=first_O_atom,last_O_atom !n_atoms
         IF ( atoms_mat(2,i,s) .EQ. 16 ) THEN
             k=k+1
             atoms_mat_i(:,k) = atoms_mat(:,i,s)
         END IF
     END DO
 
-    DO i=1,SIZE(grid,DIM=2)
-        DO j=1,SIZE(grid,DIM=3)
-            ! Get the bounds
+    DO i=1,SIZE(grid,DIM=2) ! Loop over grid directions
 
-            z_bounds = fc_get_center_of_slab(atoms_mat_i(3:5,:))
+        ! Get the bounds
 
-            lbound_up = fc_root_density_is_between(default_l_bound,default_h_bound,grid(1,i,j),grid(2,i,j)&
-            ,atoms_mat_i(3:5,:),xi,incr,z_bounds(2),box_dim,rho0,1.0_dp)
+        IF ( file_com == "NONE" ) THEN
+            unit_vect = (grid(:,i,s) - fixed_com(:))/R_expected
+        ELSE
+            unit_vect = (grid(:,i,s) - com_traj(3:5,1,s))/R_expected
+        END
 
-            IF ( (lbound_up(1) .EQ. 0.0_dp) .AND. (lbound_up(2) .EQ. 0.0_dp)) THEN
-                WRITE(log_file_unit,*) "Error within the search of roots. Exiting..."
-                STOP
-            END IF
 
-            CALL sb_ridders_root(lbound_up(1),lbound_up(2),grid(1,i,j),grid(2,i,j)&
-            ,1,x_acc,f_acc,atoms_mat_i(3:5,:),xi,z_bounds(2),box_dim,rho0,wc_interface_upper(3,i,j,s))
+        lbound_up = fc_root_density_is_between(default_l_bound,default_h_bound,grid(1,i,j),grid(2,i,j)&
+        ,atoms_mat_i(3:5,:),xi,incr,z_bounds(2),box_dim,rho0,1.0_dp)
 
-            wc_interface_upper(1,i,j,s)=grid(1,i,j)
-            wc_interface_upper(2,i,j,s)=grid(2,i,j)
+        IF ( (lbound_up(1) .EQ. 0.0_dp) .AND. (lbound_up(2) .EQ. 0.0_dp)) THEN
+            WRITE(log_file_unit,*) "Error within the search of roots. Exiting..."
+            STOP
+        END IF
 
-            lbound_down = fc_root_density_is_between(default_l_bound,default_h_bound,grid(1,i,j),grid(2,i,j)&
-            ,atoms_mat_i(3:5,:),xi,incr,z_bounds(2),box_dim,rho0,-1.0_dp)
+        CALL sb_ridders_root(lbound_up(1),lbound_up(2),grid(1,i,j),grid(2,i,j)&
+        ,1,x_acc,f_acc,atoms_mat_i(3:5,:),xi,z_bounds(2),box_dim,rho0,wc_interface_upper(3,i,j,s))
 
-            IF ( (lbound_down(1) .EQ. 0.0_dp) .AND. (lbound_down(2) .EQ. 0.0_dp)) THEN
-                WRITE(log_file_unit,*) "Error within the search of roots. Exiting..."
-                STOP
-            END IF
+        wc_interface_upper(1,i,j,s)=grid(1,i,j)
+        wc_interface_upper(2,i,j,s)=grid(2,i,j)
 
-            CALL sb_ridders_root(lbound_down(1),lbound_down(2),grid(1,i,j),grid(2,i,j)&
-            ,-1,x_acc,f_acc,atoms_mat_i(3:5,:),xi,z_bounds(2),box_dim,rho0,wc_interface_lower(3,i,j,s))
+        lbound_down = fc_root_density_is_between(default_l_bound,default_h_bound,grid(1,i,j),grid(2,i,j)&
+        ,atoms_mat_i(3:5,:),xi,incr,z_bounds(2),box_dim,rho0,-1.0_dp)
 
-            wc_interface_lower(1,i,j,s)=grid(1,i,j)
-            wc_interface_lower(2,i,j,s)=grid(2,i,j)
-        END DO
+        IF ( (lbound_down(1) .EQ. 0.0_dp) .AND. (lbound_down(2) .EQ. 0.0_dp)) THEN
+            WRITE(log_file_unit,*) "Error within the search of roots. Exiting..."
+            STOP
+        END IF
+
+        CALL sb_ridders_root(lbound_down(1),lbound_down(2),grid(1,i,j),grid(2,i,j)&
+        ,-1,x_acc,f_acc,atoms_mat_i(3:5,:),xi,z_bounds(2),box_dim,rho0,wc_interface_lower(3,i,j,s))
+
+        wc_interface_lower(1,i,j,s)=grid(1,i,j)
+        wc_interface_lower(2,i,j,s)=grid(2,i,j)
+
     END DO
     DEALLOCATE(atoms_mat_i)
 END DO
