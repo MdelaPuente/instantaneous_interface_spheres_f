@@ -115,7 +115,7 @@ Distributed under the GNU Affero General Public License v3.0. See `LICENSE` for 
 
 ## Acknowledgments & Sources
 
-* Based on the Fortran code of Rolf David for planar interfaces.
+* Based on the Fortran code of [Rolf David](https://github.com/cdavro) for planar interfaces.
 * Willard, A. P.; Chandler, D. Instantaneous Liquid Interfaces. J. Phys. Chem. B 2010, 114 (5), 1954–1958. https://doi.org/10.1021/jp909219k.
 * Ridders, C. A New Algorithm for Computing a Single Root of a Real Continuous Function. IEEE Trans. Circuits Syst. 1979, 26 (11), 979–980. https://doi.org/10.1109/TCS.1979.1084580.
 * González, A. Measurement of areas on a sphere using Fibonacci and latitude–longitude lattices, arXiv, 2009, [https://doi.org/10.48550/arXiv.0912.4540](https://doi.org/10.48550/arXiv.0912.4540)
