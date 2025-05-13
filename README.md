@@ -30,7 +30,7 @@
 
 ## About The Project
 
-A small Fortran program to calcultate Instantaneous Liquid Interfaces proposed by [Willard and Chandler](https://doi.org/10.1021/jp909219k) in spherical geometries (water droplets or cavities). The code generates a quasi-uniformly paved spherical grid with a [Fibonacci lattice](https://arxiv.org/pdf/0912.4540), which should be accurate enough for most applications (provided that the spacing be small enough). It then looks for the half density iso-surface along the directions spanned by the Fibonacci sphere from a fixed or mobile position (referred to as the center of mass COM, although it does not need to correspond to a real COM).
+A small Fortran program to calcultate Instantaneous Liquid Interfaces as proposed by [Willard and Chandler](https://doi.org/10.1021/jp909219k) in spherical geometries (water droplets or cavities). The code generates a quasi-uniformly paved spherical grid with a [Fibonacci lattice](https://arxiv.org/pdf/0912.4540), which should be accurate enough for most applications (provided that the spacing between grid points be small enough). It then looks for the half density iso-surface along the directions spanned by the Fibonacci sphere from a fixed or mobile position (referred to as the center of mass COM, although it does not need to correspond to a real COM).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -82,7 +82,22 @@ The `is_spheres` executable can be called directly (provided that `gfortran` rem
    ```
 The first argument is the name of the input file (see below). The second argument is the name of the output file (default will be out.log if no second argument is provided).
 
-If everything works, the program produces the instantaneous water surface for every frame of the trajectory in xyz format (the file will be named as the trajectory file with `-surface.xyz` at the end).
+If everything works, the program produces the instantaneous water surface for every frame of the trajectory in xyz format (the file will be named as the trajectory file with `-surface.xyz` at the end). Trajectories can be read in both xyz and dcd format. 
+
+**IMPORTANT:** if your trajectory is in dcd format (ex: `traj.dcd`) you should provide a one frame configuration in pdb format with the exact same name (`traj.pdb`).
+
+The `input_file` file is a formatted file that contains pairs of `keyword value` in each line. Some keywords are compulsory while others are optional (default values will be used if not provided, check `src/input.f90` to see the list of all possible keywords and their default values). The input files provided (and commented) in the `tests/` folder should provide reasonable starting points to use the code. 
+
+### Compulsory input keywords (one per line, space between keyword and value)
+
+| Keyword                 | Description                                                                                                                                                |
+|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| file_coord              | Name of the coordinate file, either in XYZ or DCD format, in Å<br>(if DCD, a PDB file must be present with the same name as the DCD to get the atom names) |
+| n_atoms                 | Number of atoms<br>(must be constant for all frames for XYZ, optional if DCD)                                                                              |
+| n_frames                | Number of frames to calculate the interface (starting from start)<br>(optional if DCD, and will do the instantaneous interfaces for all the frames)        |
+| xlo,xhi,ylo,yhi,zlo,zhi | Box boundaries, in Å                                                                                                                                       |
+| first_O_atom            | Index of the first oxygen water<br>(index count start from 1)<br>[default = 1]                                                                             |
+| last_O_atom             | Index of the last water oxygen<br>(index count start from 1, -1 is the end)<br>[default = -1]                              
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -100,9 +115,10 @@ Distributed under the GNU Affero General Public License v3.0. See `LICENSE` for 
 
 ## Acknowledgments & Sources
 
-*
-*
-*
+* Based on the Fortran code of Rolf David for planar interfaces.
+* Willard, A. P.; Chandler, D. Instantaneous Liquid Interfaces. J. Phys. Chem. B 2010, 114 (5), 1954–1958. https://doi.org/10.1021/jp909219k.
+* Ridders, C. A New Algorithm for Computing a Single Root of a Real Continuous Function. IEEE Trans. Circuits Syst. 1979, 26 (11), 979–980. https://doi.org/10.1109/TCS.1979.1084580.
+* González, A. Measurement of areas on a sphere using Fibonacci and latitude–longitude lattices, arXiv, 2009, [https://doi.org/10.48550/arXiv.0912.4540](https://doi.org/10.48550/arXiv.0912.4540)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
