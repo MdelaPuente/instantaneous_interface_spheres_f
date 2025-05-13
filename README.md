@@ -30,7 +30,7 @@
 
 ## About The Project
 
-What is it ?
+A small Fortran program to calcultate Instantaneous Liquid Interfaces proposed by [Willard and Chandler](https://doi.org/10.1021/jp909219k) in spherical geometries (water droplets or cavities). The code generates a quasi-uniformly paved spherical grid with a [Fibonacci lattice](https://arxiv.org/pdf/0912.4540), which should be accurate enough for most applications (provided that the spacing be small enough). It then looks for the half density iso-surface along the directions spanned by the Fibonacci sphere from a fixed or mobile position (referred to as the center of mass COM, although it does not need to correspond to a real COM).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -43,16 +43,11 @@ What is it ?
 
 ### Prerequisites
 
-What is needed for your project.
 
-ex: 
-
-Compilation
+**Compilation**
 * gfortran (version with Fortran 2008 support)
 * make
-
-Tests
-* python3 & numpy
+* Optional: VMD (text version is enough)
 
 <div id="installation"></div>
 
@@ -60,22 +55,19 @@ Tests
 
 1. Clone the repository
    ```sh
-   git clone https://github.com/laagegroup/PROJECT.git
+   git clone https://github.com/laagegroup/instantaneous_interface_spheres_f.git
    ```
 2. Or get a release and untar the archive (source code)
    ```sh
-   tar -xzvf program_name-x.x.tar.gz
+   tar -xzvf instantaneous_interface_spheres_f.tar.gz
    ```
 3. Go into the folder and compile the program
    ```sh
-   make program_name
+   make is_spheres
    ```
-4. Test the program (python3 with numpy)
-   ```sh
-   cd tests
-   ../bin/program_name input_test output_test
-   python test.py && echo "Success"
-   ```
+   This should create a `bin/is_spheres` executable as well as a set of precompiled binaries in a `build/` directory.
+4. Test the program for both xyz and dcd input trajectories (see `tests/README.md`)
+
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -84,19 +76,13 @@ Tests
 
 ## Usage
 
-How to use the code ?
-
+The `is_spheres` executable can be called directly (provided that `gfortran` remains available **in the same version used for compilation**)
    ```sh
-   program_name input output
+   is_spheres input_file output_file
    ```
+The first argument is the name of the input file (see below). The second argument is the name of the output file (default will be out.log if no second argument is provided).
 
-The input_file a formatted file:
-
-   ```sh
-   coord test.dcd
-   n_atoms 932
-   n_frames 10
-   ```
+If everything works, the program produces the instantaneous water surface for every frame of the trajectory in xyz format (the file will be named as the trajectory file with `-surface.xyz` at the end).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
