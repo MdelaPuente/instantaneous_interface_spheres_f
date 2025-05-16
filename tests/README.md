@@ -26,7 +26,7 @@ Of course, in many simulations the center of mass of the spheres might be fixed,
 
 Go to `tests/test_dcd` and run:
 ```sh
-../../bin/is_spheres is_drop_dcd.in out.log
+../../bin/is_sphere is_drop_dcd.in out.log
 ```
 After about 1 min the code should produce a `out.log` file detailing the program execution and a `test_dcd-surface.xyz` file containing the instantaneous interface for the system of the `test_dcd.dcd` trajectory. Reference outputs are provided in the `refs/` folder for comparison.
 
@@ -55,6 +55,6 @@ The box dimensions are set to **[61.37, 61.37, 61.37]** Å. The water oxygens ar
 
 Go to `tests/test_xyz` and run:
 ```sh
-../../bin/is_spheres is_drop_xyz.in out.log
+../../bin/is_sphere is_drop_xyz.in out.log
 ```
 The output should be exactly the same as in the dcd case. No need for a pdb file if the trajectory is in xyz.
