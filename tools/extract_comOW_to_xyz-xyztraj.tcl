@@ -1,7 +1,7 @@
 package require  pbctools
 
 # READ XYZ FILE: change name if needed!
-mol new test.xyz type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol new test_xyz.xyz type xyz first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 
 # Define output file and remove it if it exists already
 file delete -force COM_OW.xyz
