@@ -1,9 +1,9 @@
 package require  pbctools
 
 # READ DCD AND STRUCTURE FILE: change names if needed!
-mol new test.pdb type pdb first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol new test_dcd.pdb type pdb first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 animate delete all
-mol addfile test.dcd first 0 last -1 step 1 waitfor all
+mol addfile test_dcd.dcd first 0 last -1 step 1 waitfor all
 
 # Define output file and remove it if it exists already
 file delete -force COM_OW.xyz
