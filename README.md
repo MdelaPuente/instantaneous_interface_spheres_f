@@ -63,7 +63,7 @@ A small Fortran program to calcultate Instantaneous Liquid Interfaces as propose
    ```
 3. Go into the folder and compile the program
    ```sh
-   make is_spheres
+   make is_sphere
    ```
    This should create a `bin/is_spheres` executable as well as a set of precompiled binaries in a `build/` directory.
 4. Test the program for both xyz and dcd input trajectories (see `tests/README.md`)
