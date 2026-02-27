@@ -1,5 +1,5 @@
-! Author: Rolf David
-! Date: 06/2022
+! Original Author: Rolf David
+! Modifications by: Miguel de la Puente
 ! License: GNU AGPLv3
 ! UTF-8, LF, Fortran2008
 
